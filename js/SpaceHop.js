@@ -1,19 +1,28 @@
 /* ============================ Setup ============================ */
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-canvas.width = 240;              // low res -> chunky pixels
+canvas.width = 240;
 canvas.height = 360;
 ctx.imageSmoothingEnabled = false;
 
 /* ---------------------------- Config --------------------------- */
 const CFG = {
   gravity: 0.34,
-  jump: -6.9,
-  speed: 2.2,
+  jump: -7.0,                 // stronger to handle bigger gaps
+  speed: 2.3,
+  boostImpulse: -3.6,         // one mid-air boost (↑/W)
   startY: canvas.height - 38,
-  platformW: 48,
+
+  platformW: 44,              // narrower -> more precision
   platformH: 8,
-  gap: 44,                       // fixed gap (later we’ll randomize)
+
+  // vertical gap range (harder than fixed)
+  gapMin: 52,
+  gapMax: 64,
+
+  // horizontal reach limits between consecutive platforms
+  reachMin: 18,
+  reachMax: 28,
 };
 
 /* ---------------------------- State ---------------------------- */
@@ -26,14 +35,30 @@ let bgOffset = 0;
 
 const player = { x: 0, y: 0, w: 24, h: 24, vy: 0, prevY: 0 };
 
-/* unique-scoring state */
+/* scoring / spawn helpers */
+let platformIdSeq = 0;
 let lastLandedId = null;
+let lastSpawnX = 0;
+
+/* boost */
+let boostCharges = 1;
 
 /* ============================ Input ============================ */
 addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
   keys[k] = true;
-  if (!started && (k === "arrowleft" || k === "a" || k === "arrowright" || k === "d")) started = true;
+
+  if (!started && (k === "arrowleft" || k === "a" || k === "arrowright" || k === "d")) {
+    started = true;
+  }
+
+  // one mid-air boost per airtime
+  if (started && (k === "arrowup" || k === "w")) {
+    if (boostCharges > 0) {
+      player.vy += CFG.boostImpulse;
+      boostCharges -= 1;
+    }
+  }
 });
 addEventListener("keyup", (e) => (keys[e.key.toLowerCase()] = false));
 
@@ -89,36 +114,52 @@ function drawBackground(tMs) {
   ctx.globalAlpha = 1;
 }
 
+/* ============================ Utils ============================ */
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+
 /* ========================== Platforms ========================== */
-let platformIdSeq = 0;
 function makePlatform(x, y) {
   return { id: platformIdSeq++, x, y, w: CFG.platformW, h: CFG.platformH };
+}
+function nextGap() { return randInt(CFG.gapMin, CFG.gapMax); }
+function nextReachableX(prevX) {
+  let dx = randInt(CFG.reachMin, CFG.reachMax) * (Math.random() < 0.5 ? -1 : 1);
+  return clamp(prevX + dx, 0, canvas.width - CFG.platformW);
 }
 
 function initPlatforms() {
   platforms.length = 0;
+
   const startX = Math.floor(canvas.width / 2 - CFG.platformW / 2);
   platforms.push(makePlatform(startX, CFG.startY));
+  lastSpawnX = startX;
 
-  let y = CFG.startY - CFG.gap;
+  let y = CFG.startY - nextGap();
   while (y > -CFG.platformH) {
-    const x = Math.floor(Math.random() * (canvas.width - CFG.platformW));
+    const x = nextReachableX(lastSpawnX);
     platforms.push(makePlatform(x, y));
-    y -= CFG.gap;
+    lastSpawnX = x;
+    y -= nextGap();
   }
+
+  boostCharges = 1;
+  lastLandedId = null;
 }
 
 function addPlatformAboveTop() {
   const topY = platforms.reduce((m, p) => Math.min(m, p.y), Infinity);
-  const y = topY - CFG.gap;
-  const x = Math.floor(Math.random() * (canvas.width - CFG.platformW));
+  const y = topY - nextGap();
+  const x = nextReachableX(lastSpawnX);
   platforms.push(makePlatform(x, y));
+  lastSpawnX = x;
 }
 
 /* ============================ Draw ============================= */
 function drawPlatform(p) {
   ctx.fillStyle = "#3dd13d"; ctx.fillRect(p.x, p.y, p.w, p.h);
   ctx.strokeStyle = "#1e6a1e"; ctx.strokeRect(p.x, p.y, p.w, p.h);
+  ctx.fillStyle = "#6fff6f";   ctx.fillRect(p.x + 2, p.y + 2, p.w - 4, 1);
 }
 
 function drawPlayer() {
@@ -135,7 +176,7 @@ function drawHUD() {
 
   if (!started) {
     ctx.font = "10px monospace";
-    const msg = "Move: ←/→ or A/D";
+    const msg = "Move: ←/→ or A/D  |  Boost: ↑/W";
     const w = ctx.measureText(msg).width;
     ctx.fillText(msg, (canvas.width - w) / 2, Math.floor(canvas.height * 0.52));
   }
@@ -152,7 +193,7 @@ function landingOn(p) {
 
 /* ============================ Game ============================= */
 function resetRun() {
-  started = false; score = 0; bgOffset = 0; lastLandedId = null;
+  started = false; score = 0; bgOffset = 0; lastLandedId = null; boostCharges = 1;
   player.x = canvas.width / 2 - player.w / 2;
   player.y = CFG.startY - player.h; player.vy = 0;
   initPlatforms(); initStars();
@@ -174,7 +215,7 @@ function update(dt, ts) {
   player.prevY = player.y;
   if (started) { player.vy += CFG.gravity; player.y += player.vy; }
 
-  // land & score (unique platform only)
+  // land & score (unique platform only) + recharge boost
   for (const p of platforms) {
     if (landingOn(p)) {
       player.vy = CFG.jump;
@@ -182,6 +223,7 @@ function update(dt, ts) {
         score++; lastLandedId = p.id;
         if (score > best) best = score;
       }
+      boostCharges = 1;
     }
   }
 
@@ -193,9 +235,11 @@ function update(dt, ts) {
   }
   bgOffset += 0.18;
 
-  // recycle
+  // recycle (based on avg gap)
   platforms = platforms.filter(p => p.y < canvas.height + 2);
-  while (platforms.length < Math.ceil(canvas.height / CFG.gap) + 3) addPlatformAboveTop();
+  while (platforms.length < Math.ceil(canvas.height / ((CFG.gapMin + CFG.gapMax) / 2)) + 3) {
+    addPlatformAboveTop();
+  }
 
   // draw
   for (const p of platforms) drawPlatform(p);
