@@ -26,6 +26,9 @@ let bgOffset = 0;
 
 const player = { x: 0, y: 0, w: 24, h: 24, vy: 0, prevY: 0 };
 
+/* unique-scoring state */
+let lastLandedId = null;
+
 /* ============================ Input ============================ */
 addEventListener("keydown", (e) => {
   const k = e.key.toLowerCase();
@@ -149,7 +152,7 @@ function landingOn(p) {
 
 /* ============================ Game ============================= */
 function resetRun() {
-  started = false; score = 0; bgOffset = 0;
+  started = false; score = 0; bgOffset = 0; lastLandedId = null;
   player.x = canvas.width / 2 - player.w / 2;
   player.y = CFG.startY - player.h; player.vy = 0;
   initPlatforms(); initStars();
@@ -171,9 +174,15 @@ function update(dt, ts) {
   player.prevY = player.y;
   if (started) { player.vy += CFG.gravity; player.y += player.vy; }
 
-  // land & score (temporary, counts every landing)
+  // land & score (unique platform only)
   for (const p of platforms) {
-    if (landingOn(p)) { player.vy = CFG.jump; score++; if (score > best) best = score; }
+    if (landingOn(p)) {
+      player.vy = CFG.jump;
+      if (p.id !== lastLandedId) {
+        score++; lastLandedId = p.id;
+        if (score > best) best = score;
+      }
+    }
   }
 
   // scroll
