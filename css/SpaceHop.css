@@ -1,18 +1,21 @@
+/* Full-screen centering */
 html, body { height: 100%; }
 body {
   margin: 0;
   display: grid;
   place-items: center;
-  background: #000;
+  background: #000;           /* space */
   color: #fff;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+
+/* Pixel look: no smoothing when the canvas is scaled */
 #gameCanvas {
-  width: 480px;       /* to the display size */
-  height: 720px;      /* to the display size */
   border: 2px solid #fff;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges; /* to fallback */
-  background: #000;
-  box-shadow: 0 0 0 6px #000, inset 0 0 24px rgba(255,255,255,.07);
+  image-rendering: pixelated;     /* Safari/Chrome/Edge */
+  image-rendering: crisp-edges;   /* Fallback */
+  background: #000;               /* stars rendered in JS */
+  width: 480px;                   /* display size */
+  height: 720px;                  /* display size */
+  box-shadow: 0 0 0 6px #000, 0 0 24px rgba(255,255,255,.07) inset;
 }
