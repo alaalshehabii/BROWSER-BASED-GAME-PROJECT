@@ -27,7 +27,7 @@ const FONTS = {
   overSmall: "10px monospace"
 };
 
-/********************  TUNABLES (same values as yours)  ********************/
+/********************  TUNABLES (fixed values)  ********************/
 const GRAVITY = 0.34;
 const JUMP = -8.2;
 const PLAYER_SPEED = 2.3;
