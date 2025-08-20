@@ -32,14 +32,14 @@ const GRAVITY = 0.34;
 const JUMP = -8.2;
 const PLAYER_SPEED = 2.3;
 
-const PLATFORM_W = 44;
+const PLATFORM_W = 40;
 const PLATFORM_H = 8;
 
-const GAP_MIN = 50;
-const GAP_MAX = 70;
+const GAP_MIN = 45;
+const GAP_MAX = 85;
 
-const REACH_X_MIN = 55;
-const REACH_X_MAX = 80;
+const REACH_X_MIN = 30;
+const REACH_X_MAX = 100;
 
 const BOOST_IMPULSE = -3.8;
 
