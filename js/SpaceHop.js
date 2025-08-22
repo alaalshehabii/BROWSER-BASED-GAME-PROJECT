@@ -54,7 +54,7 @@ let boostsLeft = 1;
 
 /* astronaut png */
 const astronautImg = new Image();
-astronautImg.src = "assets/astronaut.png";
+astronautImg.src = "assets/Astronaut.png";
 
 const player = {
   w: 32,  // adjusted for astronaut sprite
