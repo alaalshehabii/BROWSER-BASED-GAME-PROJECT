@@ -52,7 +52,7 @@ let score = 0;
 let best = 0;
 let boostsLeft = 1;
 
-/* astronaut png */
+/* icon astronaut png */
 const astronautImg = new Image();
 astronautImg.src = "assets/Astronaut.png";
 
