@@ -15,7 +15,7 @@ body {
   image-rendering: pixelated;     /* Safari/Chrome/Edge */
   image-rendering: crisp-edges;   /* Fallback */
   background: #000;               /* stars rendered in JS */
-  width: 480px;                   /* display size */
-  height: 720px;                  /* display size */
+  width: min(92vw, 480px);         /* display size */
+  height: alc(min(92vw, 480px) * 1.5);         /* display size */
   box-shadow: 0 0 0 6px #000, 0 0 24px rgba(255,255,255,.07) inset;
 }

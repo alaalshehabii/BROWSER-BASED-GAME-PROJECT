@@ -27,7 +27,7 @@ const FONTS = {
   overSmall: "10px monospace"
 };
 
-/********************  TUNABLES (fixed values)  ********************/
+/********************  TUNABLES  ********************/
 const GRAVITY = 0.34;
 const JUMP = -8.2;
 const PLAYER_SPEED = 2.3;
@@ -42,8 +42,10 @@ const REACH_X_MIN = 30;
 const REACH_X_MAX = 100;
 
 const BOOST_IMPULSE = -3.8;
-
 const START_PLATFORM_Y = canvas.height - 38;
+
+// Keep platforms slightly away from the edges
+const EDGE_MARGIN = 6;
 
 /********************  STATE  ********************/
 let hasStarted = false;
@@ -52,12 +54,12 @@ let score = 0;
 let best = 0;
 let boostsLeft = 1;
 
-/* icon astronaut png */
+/* Astronaut sprite */
 const astronautImg = new Image();
 astronautImg.src = "assets/Astronaut.png";
 
 const player = {
-  w: 32,  // adjusted for astronaut sprite
+  w: 32,
   h: 32,
   x: canvas.width / 2 - 16,
   y: START_PLATFORM_Y - 32,
@@ -69,31 +71,88 @@ let platforms = [];
 let lastSpawnX = null;
 let platformIdSeq = 0;
 let lastLandedId = null;
-
 let bgOffset = 0;
 
-/** clickable hitbox for the “START” label */
+/** clickable hitbox for “START” */
 const startText = { x: 0, y: 0, w: 0, h: 0, text: "START" };
+
+/********************  AUDIO (Jump SFX + Mute)  ********************/
+const jumpSound = new Audio("assets/sounds/jump-sound.wav");
+jumpSound.preload = "auto";
+jumpSound.volume = 0.8;
+
+let audioUnlocked = false;
+let sfxReady = false;
+
+// Persist mute across restarts/reloads
+const MUTE_KEY = "spacehop_muted";
+let isMuted = localStorage.getItem(MUTE_KEY) === "1";
+
+jumpSound.addEventListener("canplaythrough", () => { sfxReady = true; });
+jumpSound.addEventListener("error", (e) => console.warn("Jump SFX load error:", e));
+
+// Autoplay unlock on first interaction
+function unlockAudioOnce() {
+  if (audioUnlocked) return;
+  const p = jumpSound.play();
+  Promise.resolve(p).then(() => jumpSound.pause()).finally(() => { audioUnlocked = true; });
+}
+window.addEventListener("pointerdown", unlockAudioOnce, { once: true });
+window.addEventListener("keydown",   unlockAudioOnce, { once: true });
+
+// Play helper (clone so rapid jumps overlap)
+function playJump() {
+  if (isMuted || !audioUnlocked || !sfxReady) return;
+  try {
+    const s = jumpSound.cloneNode(true);
+    s.volume = jumpSound.volume;
+    s.currentTime = 0;
+    s.play().catch(() => {});
+  } catch {}
+}
+
+// Mute button (top-right)
+(function mountMuteButton(){
+  let btn = document.getElementById("muteBtn");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.id = "muteBtn";
+    Object.assign(btn.style, {
+      position: "fixed", top: "10px", right: "10px", zIndex: "9999",
+      fontSize: "16px", padding: "6px 10px", borderRadius: "10px",
+      border: "1px solid #fff", background: "#111", color: "#fff",
+      cursor: "pointer", userSelect: "none", opacity: "0.9"
+    });
+    document.body.appendChild(btn);
+  }
+  function render() { btn.textContent = isMuted ? "🔇" : "🔊"; }
+  btn.onclick = () => { isMuted = !isMuted; localStorage.setItem(MUTE_KEY, isMuted ? "1" : "0"); render(); };
+  render();
+})();
 
 /********************  INPUT  ********************/
 const keys = Object.create(null);
 
 addEventListener("keydown", (e) => {
+  unlockAudioOnce();
   const k = e.key.toLowerCase();
   keys[k] = true;
 
-  // start-on-move
+  // Start on move
   if (!hasStarted && !gameOver && (k === "arrowleft" || k === "a" || k === "arrowright" || k === "d")) {
     hasStarted = true;
   }
-  // boost
+
+  // Boost
   if (hasStarted && !gameOver && (k === "arrowup" || k === "w")) {
     if (boostsLeft > 0) {
       player.vy += BOOST_IMPULSE;
       boostsLeft -= 1;
+      playJump(); // 🔊
     }
   }
-  // restart
+
+  // Restart
   if (gameOver && (k === " " || k === "enter")) {
     restartGame();
   }
@@ -103,12 +162,12 @@ addEventListener("keyup", (e) => (keys[e.key.toLowerCase()] = false));
 
 /********************  CLICK (start / restart)  ********************/
 canvas.addEventListener("pointerdown", (e) => {
+  unlockAudioOnce();
   const { left, top } = canvas.getBoundingClientRect();
   const mx = e.clientX - left;
   const my = e.clientY - top;
 
   if (!hasStarted && !gameOver) {
-    // click on “START” text
     if (mx >= startText.x && mx <= startText.x + startText.w && my >= startText.y && my <= startText.y + startText.h) {
       hasStarted = true;
       return;
@@ -122,11 +181,27 @@ canvas.addEventListener("pointerdown", (e) => {
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
 
+/* horizontal spawn */
 function nextReachableX(prevX) {
-  let dx = randInt(REACH_X_MIN, REACH_X_MAX);
-  if (Math.random() < 0.5) dx = -dx;
-  return clamp(prevX + dx, 0, canvas.width - PLATFORM_W);
+  const minX = EDGE_MARGIN;
+  const maxX = canvas.width - PLATFORM_W - EDGE_MARGIN;
+
+  let lo = Math.max(minX, prevX - REACH_X_MAX);
+  let hi = Math.min(maxX, prevX + REACH_X_MAX);
+
+  if (prevX - lo < REACH_X_MIN) lo = Math.max(minX, prevX - REACH_X_MIN);
+  if (hi - prevX < REACH_X_MIN) hi = Math.min(maxX, prevX + REACH_X_MIN);
+
+  let x, tries = 0;
+  do {
+    x = Math.floor(Math.random() * (hi - lo + 1)) + lo;
+    tries++;
+    if (tries > 8) break;
+  } while (Math.abs(x - prevX) < REACH_X_MIN);
+
+  return x;
 }
+
 const nextGap = () => randInt(GAP_MIN, GAP_MAX);
 
 /********************  BACKGROUND (stars + nebula)  ********************/
@@ -222,7 +297,6 @@ function drawPlatform(p) {
   ctx.fillRect(p.x + 2, p.y + 2, p.w - 4, 1);
 }
 
-/* ✅ Draw astronaut instead of rocket */
 function drawPlayer() {
   const px = Math.floor(player.x);
   const py = Math.floor(player.y);
@@ -315,6 +389,7 @@ function restartGame() {
   gameOver = false;
   score = 0;
 
+  // (audio state)
   player.x = canvas.width / 2 - player.w / 2;
   player.y = START_PLATFORM_Y - player.h;
   player.vy = 0;
@@ -352,6 +427,7 @@ function update(dt, nowMs) {
   for (const p of platforms) {
     if (isLandingOn(p)) {
       player.vy = JUMP;
+      playJump(); // 🔊 on land
       if (p.id !== lastLandedId) {
         score++;
         lastLandedId = p.id;
