@@ -1,13 +1,5 @@
 # 🌌 Space Hop
 
-```
-/ / __ \ | | | _ | | | | | |/ __ \ / __|
-| (| | | | | | | |) | | | || | | | | (
-_ | | | | | | | _ <| | | __ | | | |_ \
-) | |__| | | | | |) | | | | | | || |____) |
-|/ _/ || |/|| || ||_/|_____/
-```
-
 
 A vertical **platform jumper game** inspired by *Doodle Jump*, with a **retro space theme**, pixel-art visuals, and smooth physics.  
 Your mission? Guide your astronaut higher and higher by bouncing on platforms while chasing the highest score!
