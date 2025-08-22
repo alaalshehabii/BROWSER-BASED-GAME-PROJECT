@@ -1,9 +1,12 @@
 # 🌌 Space Hop
 
-/ | ___ __ _ _ __ | | () __ ___ ___
-_ \ / _ \ / ` || ' | |/ / | '_ \ / _ / |
-) || __/| (| || | | | <| | | | | /_
-|_/ _| _,||| |||__|| ||_||/
+```
+   ____  
+  / ___|   ___   __ _  
+  \___ \  / _ \ / _` |  
+   ___) ||  __/| (_| |  
+  |____/  \___| \__,_|  
+```
 
 
 A vertical **platform jumper game** inspired by *Doodle Jump*, with a **retro space theme**, pixel-art visuals, and smooth physics.  
