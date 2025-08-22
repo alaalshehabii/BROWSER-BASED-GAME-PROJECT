@@ -3,11 +3,54 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Spaceship Jumper</title>
+  <title>Space Hop</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+  <!-- Emoji favicon (encoded SVG) -->
+  <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
+
   <link rel="stylesheet" href="css/SpaceHop.css">
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
+  <main class="layout">
+    <header class="topbar">
+      <div class="title-spacer" aria-hidden="true"></div>
+      <h1 class="logo">Space Hop</h1>
+      <div class="hud" aria-live="polite">
+        <span>Score: <strong id="score">0</strong></span>
+        <span>Best: <strong id="best">0</strong></span>
+      </div>
+    </header>
+
+    <section class="content">
+      <div class="instructions-card" role="note" aria-label="How to Play">
+        <h2>How to Play</h2>
+        <ul class="keys">
+          <li><kbd>←</kbd> / <kbd>→</kbd> or <kbd>A</kbd> / <kbd>D</kbd> — Move</li>
+          <li><kbd>↑</kbd> or <kbd>W</kbd> — One-time boost</li>
+          <li>Don’t fall off the screen!</li>
+        </ul>
+      </div>
+
+      <div class="stage">
+        <canvas id="gameCanvas" width="240" height="360" aria-label="Arcade jumping game"></canvas>
+
+        <div id="overlay" class="overlay" hidden>
+          <div class="overlay-card" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
+            <h2 id="overlayTitle"></h2>
+            <p id="overlayMsg"></p>
+            <button id="restartBtn" type="button">Play again</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/data.js"></script>
   <script src="js/SpaceHop.js"></script>
 </body>
 </html>
