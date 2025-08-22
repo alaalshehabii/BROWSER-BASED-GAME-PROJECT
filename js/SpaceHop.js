@@ -1,4 +1,4 @@
- /********************  SETUP  ********************/
+/********************  SETUP  ********************/
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 canvas.width = 240;
@@ -52,14 +52,15 @@ let score = 0;
 let best = 0;
 let boostsLeft = 1;
 
-const shipImg = new Image();
-shipImg.src = "assets/spaceship.png";
+/* astronaut png */
+const astronautImg = new Image();
+astronautImg.src = "assets/astronaut.png";
 
 const player = {
-  w: 28,
-  h: 28,
-  x: canvas.width / 2 - 14,
-  y: START_PLATFORM_Y - 28,
+  w: 32,  // adjusted for astronaut sprite
+  h: 32,
+  x: canvas.width / 2 - 16,
+  y: START_PLATFORM_Y - 32,
   vy: 0,
   prevY: 0
 };
@@ -121,14 +122,11 @@ canvas.addEventListener("pointerdown", (e) => {
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
 
-/** next horizontal X for a platform, bounded to canvas */
 function nextReachableX(prevX) {
   let dx = randInt(REACH_X_MIN, REACH_X_MAX);
   if (Math.random() < 0.5) dx = -dx;
   return clamp(prevX + dx, 0, canvas.width - PLATFORM_W);
 }
-
-/** vertical gap between platforms */
 const nextGap = () => randInt(GAP_MIN, GAP_MAX);
 
 /********************  BACKGROUND (stars + nebula)  ********************/
@@ -147,7 +145,6 @@ function initStars() {
 }
 
 function drawPixelSpace(timeMs) {
-  // nebula squares
   const t = timeMs / 1000;
   for (let i = 0; i < 60; i++) {
     const nx = ((i * 40 + (t * 10) + bgOffset * 0.2) % canvas.width + canvas.width) % canvas.width;
@@ -156,7 +153,6 @@ function drawPixelSpace(timeMs) {
     ctx.fillRect(nx, ny, 20, 20);
   }
 
-  // stars
   for (const s of stars) {
     const twinkle = 0.7 + 0.3 * Math.abs(Math.sin(t * 2 + s.phase));
     ctx.globalAlpha = twinkle;
@@ -175,7 +171,6 @@ function drawPixelSpace(timeMs) {
     ctx.globalAlpha = 1;
   }
 
-  // faint scanlines
   ctx.globalAlpha = 0.05;
   ctx.fillStyle = COLORS.overlayDim;
   for (let y = 0; y < canvas.height; y += 2) ctx.fillRect(0, y, canvas.width, 1);
@@ -214,7 +209,7 @@ function addPlatformAboveTop() {
   lastSpawnX = newX;
 }
 
-/********************  RENDER (platform, player, HUD)  ********************/
+/********************  RENDER  ********************/
 function drawPlatform(p) {
   ctx.fillStyle = COLORS.platformFill;
   ctx.fillRect(p.x, p.y, p.w, p.h);
@@ -227,11 +222,12 @@ function drawPlatform(p) {
   ctx.fillRect(p.x + 2, p.y + 2, p.w - 4, 1);
 }
 
+/* ✅ Draw astronaut instead of rocket */
 function drawPlayer() {
   const px = Math.floor(player.x);
   const py = Math.floor(player.y);
-  if (shipImg.complete && shipImg.naturalWidth > 0) {
-    ctx.drawImage(shipImg, px, py, player.w, player.h);
+  if (astronautImg.complete && astronautImg.naturalWidth > 0) {
+    ctx.drawImage(astronautImg, px, py, player.w, player.h);
   } else {
     ctx.fillStyle = COLORS.playerFallback;
     ctx.fillRect(px, py, player.w, player.h);
@@ -253,14 +249,12 @@ function drawOutlinedPixelText(text, x, y, fill = COLORS.text, outline = COLORS.
 }
 
 function drawHUD() {
-  // top scores
   ctx.fillStyle = COLORS.text;
   ctx.font = FONTS.hud;
   ctx.fillText(`SCORE: ${score}`, 4, 10);
   const bestText = `BEST: ${best}`;
   ctx.fillText(bestText, canvas.width - 4 - ctx.measureText(bestText).width, 10);
 
-  // start overlay
   if (!hasStarted && !gameOver) {
     ctx.font = FONTS.start;
     const label = startText.text;
@@ -270,14 +264,12 @@ function drawHUD() {
 
     drawOutlinedPixelText(label, tx, ty);
 
-    // clickable hitbox matches the rendered label
     const approxH = 14;
     startText.x = tx - 2;
     startText.y = ty - approxH;
     startText.w = tw + 4;
     startText.h = approxH + 4;
 
-    // control hints
     ctx.font = FONTS.hint;
     const hint1 = "←/→ or A/D to move";
     const hint2 = "↑/W to BOOST";
@@ -285,7 +277,6 @@ function drawHUD() {
     ctx.fillText(hint2, Math.floor((canvas.width - ctx.measureText(hint2).width) / 2), ty + 30);
   }
 
-  // game-over overlay
   if (gameOver) {
     ctx.globalAlpha = 0.75;
     ctx.fillStyle = COLORS.overlayDim;
@@ -337,34 +328,27 @@ function restartGame() {
 }
 
 function update(dt, nowMs) {
-  // background first
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawPixelSpace(nowMs);
 
-  // world
   platforms.forEach(drawPlatform);
   drawPlayer();
   drawHUD();
 
-  // show overlays only
   if (gameOver) return;
 
-  // movement (once started)
   if (keys["arrowleft"] || keys["a"]) player.x -= PLAYER_SPEED;
   if (keys["arrowright"] || keys["d"]) player.x += PLAYER_SPEED;
 
-  // wrap horizontally
   if (player.x < -player.w) player.x = canvas.width;
   if (player.x > canvas.width) player.x = -player.w;
 
-  // physics
   player.prevY = player.y;
   if (hasStarted) {
     player.vy += GRAVITY;
     player.y += player.vy;
   }
 
-  // land & score
   for (const p of platforms) {
     if (isLandingOn(p)) {
       player.vy = JUMP;
@@ -377,7 +361,6 @@ function update(dt, nowMs) {
     }
   }
 
-  // camera follow
   const scrollThreshold = Math.floor(canvas.height * 0.42);
   if (player.y < scrollThreshold) {
     const dy = scrollThreshold - player.y;
@@ -385,15 +368,13 @@ function update(dt, nowMs) {
     for (const p of platforms) p.y += dy;
     bgOffset += dy * 0.3;
   }
-  bgOffset += 0.18; // slow drift
+  bgOffset += 0.18;
 
-  // platform lifecycle
   platforms = platforms.filter(p => p.y < canvas.height + 2);
   while (platforms.length < Math.ceil(canvas.height / ((GAP_MIN + GAP_MAX) / 2)) + 3) {
     addPlatformAboveTop();
   }
 
-  // fail state
   if (hasStarted && player.y > canvas.height) {
     gameOver = true;
     hasStarted = false;
